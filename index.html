@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestión de Laboratorio Informático</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { box-sizing: border-box; font-family: Arial, sans-serif; }
+    body { margin: 20px; background-color: #f4f6f9; color: #333; }
+    h1 { text-align: center; color: #1a252f; }
+    .container { max-width: 1000px; margin: 0 auto; }
+    .card { background: white; padding: 20px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+    .form-group { display: flex; flex-direction: column; }
+    .form-group label { font-size: 12px; font-weight: bold; margin-bottom: 4px; }
+    input, select, textarea { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+    .btn-container { margin-top: 15px; display: flex; gap: 10px; }
+    button { padding: 9px 15px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+    .btn-save { background: #27ae60; color: white; }
+    .btn-cancel { background: #7f8c8d; color: white; }
+    .btn-edit { background: #f39c12; color: white; padding: 5px 10px; }
+    .btn-delete { background: #e74c3c; color: white; padding: 5px 10px; }
+    .alert { padding: 10px; margin-bottom: 10px; border-radius: 4px; display: none; }
+    .alert-success { background: #d4edda; color: #155724; }
+    .alert-error { background: #f8d7da; color: #721c24; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 14px; }
+    th { background-color: #2c3e50; color: white; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h1>Gestión de Equipos y Componentes</h1>
+
+  <div id="alertBox" class="alert"></div>
+
+  <!-- FORMULARIO -->
+  <div class="card">
+    <h3 id="formTitle">Registrar Nuevo Componente</h3>
+    <form id="componentForm">
+      <input type="hidden" id="editId">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Código *</label>
+          <input type="text" id="codigo" required>
+        </div>
+        <div class="form-group">
+          <label>Nombre *</label>
+          <input type="text" id="nombre" required>
+        </div>
+        <div class="form-group">
+          <label>Categoría *</label>
+          <select id="categoria" required>
+            <option value="">Seleccionar</option>
+            <option value="Arduino">Arduino</option>
+            <option value="Sensores">Sensores</option>
+            <option value="Computadoras">Computadoras</option>
+            <option value="Monitores">Monitores</option>
+            <option value="Periféricos">Periféricos</option>
+            <option value="Componentes electrónicos">Componentes electrónicos</option>
+            <option value="Herramientas">Herramientas</option>
+            <option value="Redes">Redes</option>
+            <option value="Otros">Otros</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Marca</label>
+          <input type="text" id="marca">
+        </div>
+        <div class="form-group">
+          <label>Cantidad *</label>
+          <input type="number" id="cantidad" min="0" required>
+        </div>
+        <div class="form-group">
+          <label>Estado *</label>
+          <select id="estado" required>
+            <option value="Disponible">Disponible</option>
+            <option value="En uso">En uso</option>
+            <option value="Reparación">Reparación</option>
+            <option value="Baja">Baja</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group" style="margin-top: 10px;">
+        <label>Descripción</label>
+        <textarea id="descripcion" rows="2"></textarea>
+      </div>
+      <div class="btn-container">
+        <button type="submit" class="btn-save" id="btnSubmit">Guardar</button>
+        <button type="button" class="btn-cancel" id="btnCancel" onclick="resetForm()" style="display:none;">Cancelar</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- FILTROS -->
+  <div class="card">
+    <h3>Búsqueda y Filtros</h3>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Buscar (Código, Nombre, Marca)</label>
+        <input type="text" id="searchQuery" oninput="loadData()">
+      </div>
+      <div class="form-group">
+        <label>Filtrar por Categoría</label>
+        <select id="filterCategoria" onchange="loadData()">
+          <option value="">Todas</option>
+          <option value="Arduino">Arduino</option>
+          <option value="Sensores">Sensores</option>
+          <option value="Computadoras">Computadoras</option>
+          <option value="Monitores">Monitores</option>
+          <option value="Periféricos">Periféricos</option>
+          <option value="Componentes electrónicos">Componentes electrónicos</option>
+          <option value="Herramientas">Herramientas</option>
+          <option value="Redes">Redes</option>
+          <option value="Otros">Otros</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Filtrar por Estado</label>
+        <select id="filterEstado" onchange="loadData()">
+          <option value="">Todos</option>
+          <option value="Disponible">Disponible</option>
+          <option value="En uso">En uso</option>
+          <option value="Reparación">Reparación</option>
+          <option value="Baja">Baja</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- TABLA DE LISTADO -->
+  <div class="card">
+    <h3>Listado de Componentes</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Código</th>
+          <th>Nombre</th>
+          <th>Categoría</th>
+          <th>Marca</th>
+          <th>Cantidad</th>
+          <th>Estado</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="dataTable"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+    const SUPABASE_URL =  'https://ruhmjzkbsffnjiyfvgmn.supabase.co'; // Tu URL real
+const SUPABASE_KEY = 'sb_publishable_1d449IGiJCu6rhQ6GSyohA_k4tqJsgg'; // Tu clave anon public real
+  // CONFIGURACION DE SUPABASE
+  const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  const form = document.getElementById('componentForm');
+  const alertBox = document.getElementById('alertBox');
+
+  function showAlert(msg, type = 'success') {
+    alertBox.className = `alert alert-${type}`;
+    alertBox.innerText = msg;
+    alertBox.style.display = 'block';
+    setTimeout(() => { alertBox.style.display = 'none'; }, 3000);
+  }
+
+  // ALTA Y MODIFICACIÓN
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('editId').value;
+    const cantidad = parseInt(document.getElementById('cantidad').value);
+
+    if (isNaN(cantidad) || cantidad < 0) {
+      showAlert('La cantidad debe ser un número igual o mayor a cero.', 'error');
+      return;
+    }
+
+    const payload = {
+      codigo: document.getElementById('codigo').value.trim(),
+      nombre: document.getElementById('nombre').value.trim(),
+      categoria: document.getElementById('categoria').value,
+      marca: document.getElementById('marca').value.trim(),
+      cantidad: cantidad,
+      estado: document.getElementById('estado').value,
+      descripcion: document.getElementById('descripcion').value.trim()
+    };
+
+    let error;
+    if (id) {
+      ({ error } = await db.from('componentes').update(payload).eq('id', id));
+    } else {
+      ({ error } = await db.from('componentes').insert([payload]));
+    }
+
+    if (error) {
+      showAlert('Error al guardar: ' + error.message, 'error');
+    } else {
+      showAlert(id ? 'Registro actualizado correctamente' : 'Registro creado correctamente');
+      resetForm();
+      loadData();
+    }
+  });
+
+  // CONSULTAR Y FILTRAR
+  async function loadData() {
+    let query = db.from('componentes').select('*');
+
+    const search = document.getElementById('searchQuery').value.trim();
+    const cat = document.getElementById('filterCategoria').value;
+    const est = document.getElementById('filterEstado').value;
+
+    if (cat) query = query.eq('categoria', cat);
+    if (est) query = query.eq('estado', est);
+    if (search) {
+      query = query.or(`codigo.ilike.%${search}%,nombre.ilike.%${search}%,marca.ilike.%${search}%`);
+    }
+
+    const { data, error } = await query.order('created_at', { ascending: false });
+
+    if (error) {
+      showAlert('Error al cargar datos: ' + error.message, 'error');
+      return;
+    }
+
+    const tbody = document.getElementById('dataTable');
+    tbody.innerHTML = '';
+
+    data.forEach(item => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${item.codigo}</td>
+        <td>${item.nombre}</td>
+        <td>${item.categoria}</td>
+        <td>${item.marca || '-'}</td>
+        <td>${item.cantidad}</td>
+        <td>${item.estado}</td>
+        <td>
+          <button class="btn-edit" onclick='editItem(${JSON.stringify(item)})'>Editar</button>
+          <button class="btn-delete" onclick="deleteItem(${item.id})">Eliminar</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  // EDITAR
+  window.editItem = function(item) {
+    document.getElementById('editId').value = item.id;
+    document.getElementById('codigo').value = item.codigo;
+    document.getElementById('nombre').value = item.nombre;
+    document.getElementById('categoria').value = item.categoria;
+    document.getElementById('marca').value = item.marca || '';
+    document.getElementById('cantidad').value = item.cantidad;
+    document.getElementById('estado').value = item.estado;
+    document.getElementById('descripcion').value = item.descripcion || '';
+
+    document.getElementById('formTitle').innerText = 'Modificar Componente';
+    document.getElementById('btnSubmit').innerText = 'Actualizar';
+    document.getElementById('btnCancel').style.display = 'inline-block';
+  };
+
+  // ELIMINAR
+  window.deleteItem = async function(id) {
+    if (confirm('¿Está seguro de que desea eliminar este registro?')) {
+      const { error } = await db.from('componentes').delete().eq('id', id);
+      if (error) {
+        showAlert('Error al eliminar: ' + error.message, 'error');
+      } else {
+        showAlert('Registro eliminado correctamente');
+        loadData();
+      }
+    }
+  };
+
+  function resetForm() {
+    form.reset();
+    document.getElementById('editId').value = '';
+    document.getElementById('formTitle').innerText = 'Registrar Nuevo Componente';
+    document.getElementById('btnSubmit').innerText = 'Guardar';
+    document.getElementById('btnCancel').style.display = 'none';
+  }
+
+  loadData();
+</script>
+</body>
+</html>
+
+
+
+
